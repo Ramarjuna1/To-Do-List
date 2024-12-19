@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do App</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background-color: rgba(135, 206, 250, 0.5); /* Transparent blue background */
+    }
+
+    #canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+
+    /* Falling squares animation */
+    @keyframes fallingSquares {
+      0% {
+        transform: translateY(-10px);
+      }
+      100% {
+        transform: translateY(100vh);
+      }
+    }
+
+    /* Canvas animation for falling squares */
+    .falling-square {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      animation: fallingSquares 10s infinite linear;
+    }
+
+    /* To-Do App Styling */
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      background: linear-gradient(135deg, #2c3e50, #95a5a6); /* Dark black + silver color */
+      border-radius: 10px;
+      padding: 40px 20px; /* Increased padding to add more space inside */
+      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+      border: 2px solid #fff; /* White border */
+      height: 600px; /* Increased height for the container */
+      overflow-y: auto; /* Allow scrolling if content exceeds the max height */
+    }
+
+    .text-decoration-line-through {
+      color: #6c757d !important;
+    }
+
+    h1 {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* New font */
+      color: white; /* White color for To-Do List title */
+      text-align: center;
+      margin-bottom: 25px; /* Added more space between title and input box */
+    }
+
+    /* Input section */
+    .input-group {
+      margin-bottom: 20px; /* Small gap between input and buttons */
+    }
+
+    /* Hover effect for filter buttons */
+    .btn-group .btn:hover {
+      background-color: lightgray; /* Light gray color on hover */
+      color: black;
+    }
+
+    .btn-group .btn:focus {
+      outline: none;
+    }
+
+    /* Light colors for filter buttons */
+    .btn-group .btn {
+      background-color: lightblue; /* Light blue background for all buttons */
+    }
+
+    .btn-group .btn.active {
+      background-color: lightgreen; /* Light green for active filter */
+    }
+
+    .btn-group .btn.completed {
+      background-color: lightcoral; /* Light coral for completed filter */
+    }
+
+    /* Hover effect for Add button */
+    .btn-primary {
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+      border-color: lightgray; /* Light gray border on hover */
+      background-color: #007bff; /* Keep the background color */
+      color: white; /* Keep text white */
+    }
+
+    .btn-primary:focus {
+      box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Focus effect */
+    }
+
+    
+
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="root"></div>
+  <script type="text/babel">
+    function App() {
+      const [tasks, setTasks] = React.useState(
+        JSON.parse(localStorage.getItem("tasks")) || []
+      );
+      const [newTask, setNewTask] = React.useState("");
+      const [filter, setFilter] = React.useState("all");
+
+      React.useEffect(() => {
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+      }, [tasks]);
+
+      const addTask = () => {
+        if (newTask.trim() === "") return;
+        setTasks([...tasks, { id: Date.now(), text: newTask, completed: false }]);
+        setNewTask("");
+      };
+
+      const toggleTask = (id) => {
+        setTasks(
+          tasks.map((task) =>
+            task.id === id ? { ...task, completed: !task.completed } : task
+          )
+        );
+      };
+
+      const removeTask = (id) => {
+        setTasks(tasks.filter((task) => task.id !== id));
+      };
+
+      const filteredTasks = () => {
+        if (filter === "active") return tasks.filter((task) => !task.completed);
+        if (filter === "completed") return tasks.filter((task) => task.completed);
+        return tasks;
+      };
+
+      // Generate falling squares animation
+      React.useEffect(() => {
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        function createFallingSquare() {
+          const size = Math.random() * 15 + 10;
+          const x = Math.random() * canvas.width;
+          const speed = Math.random() * 3 + 1;
+          const color = Math.random() > 0.5 ? "skyblue" : "darkslategray"; // Mixed colors
+
+          const square = {
+            x,
+            y: -size,
+            size,
+            speed,
+            color,
+          };
+
+          return square;
+        }
+
+        const squares = [];
+
+        function draw() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          if (squares.length < 50) squares.push(createFallingSquare()); // Falling squares are fewer
+
+          squares.forEach((square, index) => {
+            ctx.fillStyle = square.color;
+            ctx.fillRect(square.x, square.y, square.size, square.size);
+            square.y += square.speed;
+
+            if (square.y > canvas.height) {
+              squares.splice(index, 1);
+            }
+          });
+
+          requestAnimationFrame(draw);
+        }
+
+        draw();
+      }, []);
+
+      return (
+        <div className="container">
+          <h1>To-Do List</h1>
+
+          {/* Input Section */}
+          <div className="input-group mb-3">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Add a new task..."
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+            />
+            <button className="btn btn-primary" onClick={addTask}>
+              ➕ Add
+            </button>
+          </div>
+
+          {/* Filters */}
+          <div className="btn-group mb-3" role="group">
+            <button
+              className={`btn ${filter === "all" ? "active" : ""}`}
+              onClick={() => setFilter("all")}
+            >
+              All
+            </button>
+            <button
+              className={`btn ${filter === "active" ? "active" : ""}`}
+              onClick={() => setFilter("active")}
+            >
+              Active
+            </button>
+            <button
+              className={`btn ${filter === "completed" ? "completed" : ""}`}
+              onClick={() => setFilter("completed")}
+            >
+              Completed
+            </button>
+          </div>
+
+          {/* Task List */}
+          {filteredTasks().length === 0 ? (
+            <p className="text-center">No tasks found.</p>
+          ) : (
+            <ul className="list-group">
+              {filteredTasks().map((task) => (
+                <li
+                  key={task.id}
+                  className="list-group-item d-flex justify-content-between align-items-center"
+                >
+                  <div>
+                    <input
+                      type="checkbox"
+                      checked={task.completed}
+                      onChange={() => toggleTask(task.id)}
+                      className="form-check-input me-2"
+                    />
+                    <span
+                      className={`${
+                        task.completed
+                          ? "text-decoration-line-through text-muted"
+                          : ""
+                      }`}
+                    >
+                      {task.text}
+                    </span>
+                  </div>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => removeTask(task.id)}
+                  >
+                    ❌
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
